@@ -7,15 +7,29 @@ export const getDashboardData = async () => {
     });
     
     // Fetch aggregated statistics from multiple tables
-    const [clientsResponse, projectsResponse, tasksResponse, invoicesResponse] = await Promise.all([
-      // Total clients count
+// Fetch current and historical data for comparison
+    const [
+      clientsResponse, clientsHistoricalResponse,
+      projectsResponse, projectsHistoricalResponse,
+      tasksResponse, tasksHistoricalResponse,
+      invoicesResponse, invoicesHistoricalResponse
+    ] = await Promise.all([
+      // Current clients count
       apperClient.fetchRecords('client', {
         aggregators: [{
           id: 'totalClients',
           fields: [{ field: { Name: 'Id' }, Function: 'Count' }]
         }]
       }),
-      // Active projects count
+      // Historical clients count (last month)
+      apperClient.fetchRecords('client', {
+        aggregators: [{
+          id: 'totalClientsLastMonth',
+          fields: [{ field: { Name: 'Id' }, Function: 'Count' }],
+          where: [{ FieldName: 'CreatedOn', Operator: 'RelativeMatch', Values: ['last month'] }]
+        }]
+      }),
+      // Current active projects
       apperClient.fetchRecords('project', {
         aggregators: [{
           id: 'activeProjects',
@@ -23,7 +37,18 @@ export const getDashboardData = async () => {
           where: [{ FieldName: 'status', Operator: 'EqualTo', Values: ['active'] }]
         }]
       }),
-      // Tasks statistics (pending and completed)
+      // Historical active projects (last week)
+      apperClient.fetchRecords('project', {
+        aggregators: [{
+          id: 'activeProjectsLastWeek',
+          fields: [{ field: { Name: 'Id' }, Function: 'Count' }],
+          where: [
+            { FieldName: 'status', Operator: 'EqualTo', Values: ['active'] },
+            { FieldName: 'CreatedOn', Operator: 'RelativeMatch', Values: ['last week'] }
+          ]
+        }]
+      }),
+      // Current tasks statistics
       apperClient.fetchRecords('task', {
         aggregators: [
           {
@@ -46,7 +71,28 @@ export const getDashboardData = async () => {
           }
         ]
       }),
-      // Invoice statistics (total revenue and overdue invoices)
+      // Historical tasks statistics (yesterday and last week)
+      apperClient.fetchRecords('task', {
+        aggregators: [
+          {
+            id: 'pendingTasksYesterday',
+            fields: [{ field: { Name: 'Id' }, Function: 'Count' }],
+            where: [
+              { FieldName: 'status', Operator: 'NotEqualTo', Values: ['done'] },
+              { FieldName: 'CreatedOn', Operator: 'RelativeMatch', Values: ['yesterday'] }
+            ]
+          },
+          {
+            id: 'completedTasksLastWeek',
+            fields: [{ field: { Name: 'Id' }, Function: 'Count' }],
+            where: [
+              { FieldName: 'status', Operator: 'EqualTo', Values: ['done'] },
+              { FieldName: 'ModifiedOn', Operator: 'RelativeMatch', Values: ['last week'] }
+            ]
+          }
+        ]
+      }),
+      // Current invoice statistics
       apperClient.fetchRecords('app_invoice', {
         aggregators: [
           {
@@ -66,10 +112,21 @@ export const getDashboardData = async () => {
             ]
           }
         ]
+      }),
+      // Historical invoice statistics (last month)
+      apperClient.fetchRecords('app_invoice', {
+        aggregators: [{
+          id: 'monthlyRevenueLastMonth',
+          fields: [{ field: { Name: 'amount' }, Function: 'Sum' }],
+          where: [
+            { FieldName: 'status', Operator: 'EqualTo', Values: ['paid'] },
+            { FieldName: 'paymentDate', Operator: 'RelativeMatch', Values: ['last month'] }
+          ]
+        }]
       })
     ]);
 
-    // Extract aggregated values with fallbacks
+    // Extract current values with fallbacks
     const totalClients = clientsResponse?.aggregators?.find(a => a.id === 'totalClients')?.value || 0;
     const activeProjects = projectsResponse?.aggregators?.find(a => a.id === 'activeProjects')?.value || 0;
     const pendingTasks = tasksResponse?.aggregators?.find(a => a.id === 'pendingTasks')?.value || 0;
@@ -78,6 +135,47 @@ export const getDashboardData = async () => {
     const monthlyRevenue = invoicesResponse?.aggregators?.find(a => a.id === 'monthlyRevenue')?.value || 0;
     const overdueInvoices = invoicesResponse?.aggregators?.find(a => a.id === 'overdueInvoices')?.value || 0;
 
+    // Extract historical values for comparison
+    const totalClientsLastMonth = clientsHistoricalResponse?.aggregators?.find(a => a.id === 'totalClientsLastMonth')?.value || 0;
+    const activeProjectsLastWeek = projectsHistoricalResponse?.aggregators?.find(a => a.id === 'activeProjectsLastWeek')?.value || 0;
+    const pendingTasksYesterday = tasksHistoricalResponse?.aggregators?.find(a => a.id === 'pendingTasksYesterday')?.value || 0;
+    const completedTasksLastWeek = tasksHistoricalResponse?.aggregators?.find(a => a.id === 'completedTasksLastWeek')?.value || 0;
+    const monthlyRevenueLastMonth = invoicesHistoricalResponse?.aggregators?.find(a => a.id === 'monthlyRevenueLastMonth')?.value || 0;
+
+    // Calculate dynamic changes and trends
+    const calculatePercentageChange = (current, previous) => {
+      if (previous === 0) return current > 0 ? '+100%' : '0%';
+      const change = ((current - previous) / previous) * 100;
+      return change > 0 ? `+${change.toFixed(0)}%` : `${change.toFixed(0)}%`;
+    };
+
+    const calculateDifference = (current, previous) => {
+      const diff = current - previous;
+      return diff > 0 ? `+${diff}` : `${diff}`;
+    };
+
+    // Calculate client growth percentage
+    const clientGrowth = totalClients > 0 ? calculatePercentageChange(totalClients, totalClients - totalClientsLastMonth) : '0%';
+    
+    // Calculate project change from last week
+    const projectChange = activeProjects - activeProjectsLastWeek;
+    const projectChangeText = projectChange !== 0 ? `${calculateDifference(activeProjects, activeProjectsLastWeek)} this week` : 'No change';
+    
+    // Calculate task change from yesterday
+    const taskChange = pendingTasks - pendingTasksYesterday;
+    const taskChangeText = taskChange !== 0 ? `${calculateDifference(pendingTasks, pendingTasksYesterday)} from yesterday` : 'No change';
+    
+    // Calculate revenue growth percentage
+    const revenueGrowth = monthlyRevenue > 0 ? calculatePercentageChange(monthlyRevenue, monthlyRevenueLastMonth) : '0%';
+    
+    // Calculate completed tasks change from last week
+    const completedTasksChange = completedTasks - completedTasksLastWeek;
+    const completedTasksChangeText = completedTasksChange !== 0 ? `${calculateDifference(completedTasks, completedTasksLastWeek)} this week` : 'No change';
+    
+    // Calculate overdue items urgency level
+    const totalOverdueItems = overdueTasks + overdueInvoices;
+    const overdueUrgencyText = totalOverdueItems > 5 ? `${totalOverdueItems} urgent` : totalOverdueItems > 0 ? `${totalOverdueItems} items` : 'None';
+
     return {
       summary: {
         totalClients,
@@ -85,7 +183,21 @@ export const getDashboardData = async () => {
         pendingTasks,
         monthlyRevenue,
         completedTasks,
-        overdueItems: overdueTasks + overdueInvoices
+        overdueItems: totalOverdueItems,
+        // Dynamic change values
+        clientGrowth,
+        projectChange: projectChangeText,
+        taskChange: taskChangeText,
+        revenueGrowth,
+        completedTasksChange: completedTasksChangeText,
+        overdueUrgency: overdueUrgencyText,
+        // Change types for UI styling
+        clientGrowthType: clientGrowth.includes('+') ? 'positive' : clientGrowth.includes('-') ? 'negative' : 'neutral',
+        projectChangeType: projectChange > 0 ? 'positive' : projectChange < 0 ? 'negative' : 'neutral',
+        taskChangeType: taskChange < 0 ? 'positive' : taskChange > 0 ? 'negative' : 'neutral', // Fewer pending tasks is positive
+revenueGrowthType: revenueGrowth.includes('+') ? 'positive' : revenueGrowth.includes('-') ? 'negative' : 'neutral',
+        completedTasksChangeType: completedTasksChange >= 0 ? 'positive' : 'negative',
+        overdueUrgencyType: totalOverdueItems > 5 ? 'negative' : totalOverdueItems > 0 ? 'neutral' : 'positive'
       },
       recentActivity: [
         {

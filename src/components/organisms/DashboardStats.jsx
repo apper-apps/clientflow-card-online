@@ -14,52 +14,52 @@ const DashboardStats = ({ dashboardData }) => {
 
   const summary = dashboardData?.summary || defaultStats;
 
-  const stats = [
+const stats = [
     {
       title: "Total Clients",
       value: summary.totalClients.toString(),
-      change: "+12%",
-      changeType: "positive",
+      change: summary.clientGrowth || "0%",
+      changeType: summary.clientGrowthType || "neutral",
       icon: "Users",
       delay: 0
     },
     {
       title: "Active Projects",
       value: summary.activeProjects.toString(),
-      change: "+2 this week",
-      changeType: "positive",
+      change: summary.projectChange || "No change",
+      changeType: summary.projectChangeType || "neutral",
       icon: "FolderOpen",
       delay: 0.1
     },
     {
       title: "Pending Tasks",
       value: summary.pendingTasks.toString(),
-      change: "-8 from yesterday",
-      changeType: "negative",
+      change: summary.taskChange || "No change",
+      changeType: summary.taskChangeType || "neutral",
       icon: "CheckSquare",
       delay: 0.2
     },
     {
       title: "Monthly Revenue",
       value: `$${summary.monthlyRevenue.toLocaleString()}`,
-      change: "+18%",
-      changeType: "positive",
+      change: summary.revenueGrowth || "0%",
+      changeType: summary.revenueGrowthType || "neutral",
       icon: "DollarSign",
       delay: 0.3
     },
     {
       title: "Completed Tasks",
       value: summary.completedTasks.toString(),
-      change: "+24 this week",
-      changeType: "positive",
+      change: summary.completedTasksChange || "No change",
+      changeType: summary.completedTasksChangeType || "neutral",
       icon: "CheckCircle2",
       delay: 0.4
     },
     {
       title: "Overdue Items",
       value: summary.overdueItems.toString(),
-      change: "2 urgent",
-      changeType: "neutral",
+      change: summary.overdueUrgency || "None",
+      changeType: summary.overdueUrgencyType || "neutral",
       icon: "AlertTriangle",
       delay: 0.5
     }
