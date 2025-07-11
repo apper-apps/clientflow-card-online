@@ -5,9 +5,55 @@ export const getDashboardData = async () => {
       apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
       apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
     });
+
+    const params = {
+      fields: [
+        { "field": { "Name": "Name" } },
+        { "field": { "Name": "Tags" } },
+        { "field": { "Name": "Owner" } },
+        { "field": { "Name": "CreatedOn" } },
+        { "field": { "Name": "CreatedBy" } },
+        { "field": { "Name": "ModifiedOn" } },
+        { "field": { "Name": "ModifiedBy" } },
+        { "field": { "Name": "summary" } },
+        { "field": { "Name": "recentActivity" } },
+        { "field": { "Name": "quickStats" } }
+      ],
+      "pagingInfo": {
+        "limit": 1,
+        "offset": 0
+      }
+    };
+
+    const response = await apperClient.fetchRecords('dashboard', params);
     
-    // Fetch aggregated statistics from multiple tables
-// Fetch current and historical data for comparison
+    if (!response.success) {
+      console.error('Dashboard fetch failed:', response.message);
+      throw new Error(response.message || 'Failed to fetch dashboard data');
+    }
+
+    // Return the first dashboard record or empty object if no data
+    const dashboardData = response.data && response.data.length > 0 ? response.data[0] : {};
+    
+    // Add a small delay to simulate network timing
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    return dashboardData;
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+    throw error;
+  }
+};
+
+export const getDashboardStats = async () => {
+  try {
+    const { ApperClient } = window.ApperSDK;
+    const apperClient = new ApperClient({
+      apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+      apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+    });
+// Fetch aggregated statistics from multiple tables
+    // Fetch current and historical data for comparison
     const [
       clientsResponse, clientsHistoricalResponse,
       projectsResponse, projectsHistoricalResponse,
@@ -195,7 +241,7 @@ export const getDashboardData = async () => {
         clientGrowthType: clientGrowth.includes('+') ? 'positive' : clientGrowth.includes('-') ? 'negative' : 'neutral',
         projectChangeType: projectChange > 0 ? 'positive' : projectChange < 0 ? 'negative' : 'neutral',
         taskChangeType: taskChange < 0 ? 'positive' : taskChange > 0 ? 'negative' : 'neutral', // Fewer pending tasks is positive
-revenueGrowthType: revenueGrowth.includes('+') ? 'positive' : revenueGrowth.includes('-') ? 'negative' : 'neutral',
+        revenueGrowthType: revenueGrowth.includes('+') ? 'positive' : revenueGrowth.includes('-') ? 'negative' : 'neutral',
         completedTasksChangeType: completedTasksChange >= 0 ? 'positive' : 'negative',
         overdueUrgencyType: totalOverdueItems > 5 ? 'negative' : totalOverdueItems > 0 ? 'neutral' : 'positive'
       },
@@ -249,7 +295,7 @@ revenueGrowthType: revenueGrowth.includes('+') ? 'positive' : revenueGrowth.incl
       }
     };
   } catch (error) {
-    console.error("Error fetching dashboard data:", error);
+    console.error("Error fetching dashboard stats:", error);
     throw error;
   }
 };
