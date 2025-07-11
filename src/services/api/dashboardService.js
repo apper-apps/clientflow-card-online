@@ -6,31 +6,86 @@ export const getDashboardData = async () => {
       apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
     });
     
-    // Get dashboard data using aggregation queries
-    const params = {
-      fields: [
-        { field: { Name: "summary" } },
-        { field: { Name: "recentActivity" } },
-        { field: { Name: "quickStats" } }
-      ]
-    };
-    
-    const response = await apperClient.fetchRecords('dashboard', params);
-    
-    if (!response.success) {
-      throw new Error(response.message);
-    }
-    
-    // Return mock data structure for now since dashboard is complex
-    // In a real implementation, this would aggregate data from multiple tables
+    // Fetch aggregated statistics from multiple tables
+    const [clientsResponse, projectsResponse, tasksResponse, invoicesResponse] = await Promise.all([
+      // Total clients count
+      apperClient.fetchRecords('client', {
+        aggregators: [{
+          id: 'totalClients',
+          fields: [{ field: { Name: 'Id' }, Function: 'Count' }]
+        }]
+      }),
+      // Active projects count
+      apperClient.fetchRecords('project', {
+        aggregators: [{
+          id: 'activeProjects',
+          fields: [{ field: { Name: 'Id' }, Function: 'Count' }],
+          where: [{ FieldName: 'status', Operator: 'EqualTo', Values: ['active'] }]
+        }]
+      }),
+      // Tasks statistics (pending and completed)
+      apperClient.fetchRecords('task', {
+        aggregators: [
+          {
+            id: 'pendingTasks',
+            fields: [{ field: { Name: 'Id' }, Function: 'Count' }],
+            where: [{ FieldName: 'status', Operator: 'NotEqualTo', Values: ['done'] }]
+          },
+          {
+            id: 'completedTasks',
+            fields: [{ field: { Name: 'Id' }, Function: 'Count' }],
+            where: [{ FieldName: 'status', Operator: 'EqualTo', Values: ['done'] }]
+          },
+          {
+            id: 'overdueTasks',
+            fields: [{ field: { Name: 'Id' }, Function: 'Count' }],
+            where: [
+              { FieldName: 'status', Operator: 'NotEqualTo', Values: ['done'] },
+              { FieldName: 'dueDate', Operator: 'LessThan', Values: [new Date().toISOString().split('T')[0]] }
+            ]
+          }
+        ]
+      }),
+      // Invoice statistics (total revenue and overdue invoices)
+      apperClient.fetchRecords('app_invoice', {
+        aggregators: [
+          {
+            id: 'monthlyRevenue',
+            fields: [{ field: { Name: 'amount' }, Function: 'Sum' }],
+            where: [
+              { FieldName: 'status', Operator: 'EqualTo', Values: ['paid'] },
+              { FieldName: 'paymentDate', Operator: 'RelativeMatch', Values: ['this month'] }
+            ]
+          },
+          {
+            id: 'overdueInvoices',
+            fields: [{ field: { Name: 'Id' }, Function: 'Count' }],
+            where: [
+              { FieldName: 'status', Operator: 'NotEqualTo', Values: ['paid'] },
+              { FieldName: 'dueDate', Operator: 'LessThan', Values: [new Date().toISOString().split('T')[0]] }
+            ]
+          }
+        ]
+      })
+    ]);
+
+    // Extract aggregated values with fallbacks
+    const totalClients = clientsResponse?.aggregators?.find(a => a.id === 'totalClients')?.value || 0;
+    const activeProjects = projectsResponse?.aggregators?.find(a => a.id === 'activeProjects')?.value || 0;
+    const pendingTasks = tasksResponse?.aggregators?.find(a => a.id === 'pendingTasks')?.value || 0;
+    const completedTasks = tasksResponse?.aggregators?.find(a => a.id === 'completedTasks')?.value || 0;
+    const overdueTasks = tasksResponse?.aggregators?.find(a => a.id === 'overdueTasks')?.value || 0;
+    const monthlyRevenue = invoicesResponse?.aggregators?.find(a => a.id === 'monthlyRevenue')?.value || 0;
+    const overdueInvoices = invoicesResponse?.aggregators?.find(a => a.id === 'overdueInvoices')?.value || 0;
+
     return {
       summary: {
-        totalClients: 24,
-        activeProjects: 8,
-        pendingTasks: 47,
-        monthlyRevenue: 12450,
-        completedTasks: 156,
-        overdueItems: 3
+        totalClients,
+        activeProjects,
+        pendingTasks,
+        monthlyRevenue,
+        completedTasks,
+        overdueItems: overdueTasks + overdueInvoices
       },
       recentActivity: [
         {
@@ -76,7 +131,7 @@ export const getDashboardData = async () => {
       ],
       quickStats: {
         projectsThisWeek: 3,
-        tasksCompleted: 24,
+        tasksCompleted: completedTasks,
         hoursTracked: 168,
         invoicesSent: 5
       }

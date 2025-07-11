@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import NavigationItem from "@/components/molecules/NavigationItem";
 import ApperIcon from "@/components/ApperIcon";
@@ -6,14 +6,89 @@ import { useSidebar } from "@/hooks/useSidebar";
 
 const Sidebar = () => {
   const { isOpen, closeSidebar } = useSidebar();
+  const [badgeCounts, setBadgeCounts] = useState({
+    clients: "0",
+    projects: "0",
+    tasks: "0",
+    timeTracking: "0",
+    invoices: "0"
+  });
+  const [badgeLoading, setBadgeLoading] = useState(true);
 
-const navigationItems = [
+  const fetchBadgeCounts = async () => {
+    try {
+      setBadgeLoading(true);
+      const { ApperClient } = window.ApperSDK;
+      const apperClient = new ApperClient({
+        apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+        apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+      });
+
+      // Fetch counts using aggregation queries for efficiency
+      const [clientsResponse, projectsResponse, tasksResponse, invoicesResponse] = await Promise.all([
+        // Active clients count
+        apperClient.fetchRecords('client', {
+          aggregators: [{
+            id: 'activeClients',
+            fields: [{ field: { Name: 'Id' }, Function: 'Count' }],
+            where: [{ FieldName: 'status', Operator: 'EqualTo', Values: ['active'] }]
+          }]
+        }),
+        // Active projects count
+        apperClient.fetchRecords('project', {
+          aggregators: [{
+            id: 'activeProjects',
+            fields: [{ field: { Name: 'Id' }, Function: 'Count' }],
+            where: [{ FieldName: 'status', Operator: 'EqualTo', Values: ['active'] }]
+          }]
+        }),
+        // Non-completed tasks count
+        apperClient.fetchRecords('task', {
+          aggregators: [{
+            id: 'pendingTasks',
+            fields: [{ field: { Name: 'Id' }, Function: 'Count' }],
+            where: [{ FieldName: 'status', Operator: 'NotEqualTo', Values: ['done'] }]
+          }]
+        }),
+        // Unpaid invoices count
+        apperClient.fetchRecords('app_invoice', {
+          aggregators: [{
+            id: 'unpaidInvoices',
+            fields: [{ field: { Name: 'Id' }, Function: 'Count' }],
+            where: [{ FieldName: 'status', Operator: 'NotEqualTo', Values: ['paid'] }]
+          }]
+        })
+      ]);
+
+      // Extract counts from aggregator responses
+      const newCounts = {
+        clients: clientsResponse?.aggregators?.find(a => a.id === 'activeClients')?.value?.toString() || "0",
+        projects: projectsResponse?.aggregators?.find(a => a.id === 'activeProjects')?.value?.toString() || "0",
+        tasks: tasksResponse?.aggregators?.find(a => a.id === 'pendingTasks')?.value?.toString() || "0",
+        timeTracking: "0", // Placeholder for time tracking
+        invoices: invoicesResponse?.aggregators?.find(a => a.id === 'unpaidInvoices')?.value?.toString() || "0"
+      };
+
+      setBadgeCounts(newCounts);
+    } catch (error) {
+      console.error("Error fetching badge counts:", error);
+      // Keep default values on error
+    } finally {
+      setBadgeLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBadgeCounts();
+  }, []);
+
+  const navigationItems = [
     { to: "/", icon: "LayoutDashboard", label: "Dashboard" },
-    { to: "/clients", icon: "Users", label: "Clients", badge: "12" },
-    { to: "/projects", icon: "FolderOpen", label: "Projects", badge: "8" },
-    { to: "/tasks", icon: "CheckSquare", label: "Tasks", badge: "24" },
-    { to: "/time-tracking", icon: "Timer", label: "Time Tracking", badge: "2" },
-    { to: "/invoices", icon: "FileText", label: "Invoices", badge: "5" }
+    { to: "/clients", icon: "Users", label: "Clients", badge: badgeLoading ? "..." : badgeCounts.clients },
+    { to: "/projects", icon: "FolderOpen", label: "Projects", badge: badgeLoading ? "..." : badgeCounts.projects },
+    { to: "/tasks", icon: "CheckSquare", label: "Tasks", badge: badgeLoading ? "..." : badgeCounts.tasks },
+    { to: "/time-tracking", icon: "Timer", label: "Time Tracking", badge: badgeLoading ? "..." : badgeCounts.timeTracking },
+    { to: "/invoices", icon: "FileText", label: "Invoices", badge: badgeLoading ? "..." : badgeCounts.invoices }
   ];
 
   // Desktop Sidebar - Static positioning

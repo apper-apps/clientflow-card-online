@@ -1,11 +1,23 @@
 import React from "react";
 import StatCard from "@/components/molecules/StatCard";
 
-const DashboardStats = () => {
+const DashboardStats = ({ dashboardData }) => {
+  // Default data structure in case props are not provided
+  const defaultStats = {
+    totalClients: 0,
+    activeProjects: 0,
+    pendingTasks: 0,
+    monthlyRevenue: 0,
+    completedTasks: 0,
+    overdueItems: 0
+  };
+
+  const summary = dashboardData?.summary || defaultStats;
+
   const stats = [
     {
       title: "Total Clients",
-      value: "24",
+      value: summary.totalClients.toString(),
       change: "+12%",
       changeType: "positive",
       icon: "Users",
@@ -13,7 +25,7 @@ const DashboardStats = () => {
     },
     {
       title: "Active Projects",
-      value: "8",
+      value: summary.activeProjects.toString(),
       change: "+2 this week",
       changeType: "positive",
       icon: "FolderOpen",
@@ -21,7 +33,7 @@ const DashboardStats = () => {
     },
     {
       title: "Pending Tasks",
-      value: "47",
+      value: summary.pendingTasks.toString(),
       change: "-8 from yesterday",
       changeType: "negative",
       icon: "CheckSquare",
@@ -29,7 +41,7 @@ const DashboardStats = () => {
     },
     {
       title: "Monthly Revenue",
-      value: "$12,450",
+      value: `$${summary.monthlyRevenue.toLocaleString()}`,
       change: "+18%",
       changeType: "positive",
       icon: "DollarSign",
@@ -37,7 +49,7 @@ const DashboardStats = () => {
     },
     {
       title: "Completed Tasks",
-      value: "156",
+      value: summary.completedTasks.toString(),
       change: "+24 this week",
       changeType: "positive",
       icon: "CheckCircle2",
@@ -45,7 +57,7 @@ const DashboardStats = () => {
     },
     {
       title: "Overdue Items",
-      value: "3",
+      value: summary.overdueItems.toString(),
       change: "2 urgent",
       changeType: "neutral",
       icon: "AlertTriangle",
