@@ -46,10 +46,10 @@ const Clients = () => {
     loadClients();
   }, []);
 
-  const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.company.toLowerCase().includes(searchTerm.toLowerCase())
+const filteredClients = clients.filter(client =>
+    (client.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (client.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (client.company?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -158,8 +158,8 @@ const Clients = () => {
               <Card hover className="p-6 h-full transition-all duration-200 hover:shadow-lg">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center text-white font-semibold shadow-lg">
-                      {client.name.charAt(0).toUpperCase()}
+<div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center text-white font-semibold shadow-lg">
+                      {(client.name?.charAt(0) || '?').toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-900 dark:text-white truncate">
