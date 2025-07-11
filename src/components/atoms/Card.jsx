@@ -19,7 +19,7 @@ const Card = React.forwardRef(({
       )}
       {...props}
     >
-      {children}
+      {children != null && children}
     </div>
   );
 });
