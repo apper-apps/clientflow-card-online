@@ -16,10 +16,10 @@ const Card = React.forwardRef(({
         hover && "transition-all duration-200 hover:shadow-lg hover:-translate-y-1",
         gradient && "bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900",
         className
-      )}
+)}
       {...props}
     >
-      {children != null && children}
+      {children}
     </div>
   );
 });
