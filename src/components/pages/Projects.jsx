@@ -81,8 +81,8 @@ const getClientName = (clientId) => {
     return client ? client.name : `Client ID: ${clientId}`;
   };
 
-  const filteredProjects = projects.filter(project => {
-    const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase());
+const filteredProjects = projects.filter(project => {
+    const matchesSearch = (project.name?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || project.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
