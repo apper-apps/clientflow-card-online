@@ -1,4 +1,4 @@
-import React from "react";
+import React, { forwardRef } from "react";
 import { cn } from "@/utils/cn";
 
 const Card = React.forwardRef(({ 
@@ -12,16 +12,16 @@ const Card = React.forwardRef(({
     <div
       ref={ref}
       className={cn(
-        "bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm",
-        hover && "transition-all duration-200 hover:shadow-lg hover:-translate-y-1",
+        "rounded-lg border bg-white p-6 shadow-sm transition-all duration-200 dark:bg-gray-800 dark:border-gray-700",
+        hover && "hover:shadow-md hover:scale-[1.02] cursor-pointer",
         gradient && "bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900",
         className
-)}
+      )}
       {...props}
     >
       {children}
     </div>
-  );
+);
 });
 
 Card.displayName = "Card";
