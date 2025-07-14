@@ -24,49 +24,45 @@ const Sidebar = () => {
         apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
       });
 
-      // Fetch counts using aggregation queries for efficiency
+// Fetch total counts from all tables for accurate badge display
       const [clientsResponse, projectsResponse, tasksResponse, invoicesResponse] = await Promise.all([
-        // Active clients count
+        // Total clients count
         apperClient.fetchRecords('client', {
           aggregators: [{
-            id: 'activeClients',
-            fields: [{ field: { Name: 'Id' }, Function: 'Count' }],
-            where: [{ FieldName: 'status', Operator: 'EqualTo', Values: ['active'] }]
+            id: 'totalClients',
+            fields: [{ field: { Name: 'Id' }, Function: 'Count' }]
           }]
         }),
-        // Active projects count
+        // Total projects count
         apperClient.fetchRecords('project', {
           aggregators: [{
-            id: 'activeProjects',
-            fields: [{ field: { Name: 'Id' }, Function: 'Count' }],
-            where: [{ FieldName: 'status', Operator: 'EqualTo', Values: ['active'] }]
+            id: 'totalProjects',
+            fields: [{ field: { Name: 'Id' }, Function: 'Count' }]
           }]
         }),
-        // Non-completed tasks count
+        // Total tasks count
         apperClient.fetchRecords('task', {
           aggregators: [{
-            id: 'pendingTasks',
-            fields: [{ field: { Name: 'Id' }, Function: 'Count' }],
-            where: [{ FieldName: 'status', Operator: 'NotEqualTo', Values: ['done'] }]
+            id: 'totalTasks',
+            fields: [{ field: { Name: 'Id' }, Function: 'Count' }]
           }]
         }),
-        // Unpaid invoices count
+        // Total invoices count
         apperClient.fetchRecords('app_invoice', {
           aggregators: [{
-            id: 'unpaidInvoices',
-            fields: [{ field: { Name: 'Id' }, Function: 'Count' }],
-            where: [{ FieldName: 'status', Operator: 'NotEqualTo', Values: ['paid'] }]
+            id: 'totalInvoices',
+            fields: [{ field: { Name: 'Id' }, Function: 'Count' }]
           }]
         })
       ]);
 
       // Extract counts from aggregator responses
       const newCounts = {
-        clients: clientsResponse?.aggregators?.find(a => a.id === 'activeClients')?.value?.toString() || "0",
-        projects: projectsResponse?.aggregators?.find(a => a.id === 'activeProjects')?.value?.toString() || "0",
-        tasks: tasksResponse?.aggregators?.find(a => a.id === 'pendingTasks')?.value?.toString() || "0",
+        clients: clientsResponse?.aggregators?.find(a => a.id === 'totalClients')?.value?.toString() || "0",
+        projects: projectsResponse?.aggregators?.find(a => a.id === 'totalProjects')?.value?.toString() || "0",
+        tasks: tasksResponse?.aggregators?.find(a => a.id === 'totalTasks')?.value?.toString() || "0",
         timeTracking: "0", // Placeholder for time tracking
-        invoices: invoicesResponse?.aggregators?.find(a => a.id === 'unpaidInvoices')?.value?.toString() || "0"
+        invoices: invoicesResponse?.aggregators?.find(a => a.id === 'totalInvoices')?.value?.toString() || "0"
       };
 
       setBadgeCounts(newCounts);

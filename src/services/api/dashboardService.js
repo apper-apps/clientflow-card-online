@@ -1,44 +1,12 @@
 export const getDashboardData = async () => {
   try {
-    const { ApperClient } = window.ApperSDK;
-    const apperClient = new ApperClient({
-      apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
-      apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
-    });
-
-    const params = {
-      fields: [
-        { "field": { "Name": "Name" } },
-        { "field": { "Name": "Tags" } },
-        { "field": { "Name": "Owner" } },
-        { "field": { "Name": "CreatedOn" } },
-        { "field": { "Name": "CreatedBy" } },
-        { "field": { "Name": "ModifiedOn" } },
-        { "field": { "Name": "ModifiedBy" } },
-        { "field": { "Name": "summary" } },
-        { "field": { "Name": "recentActivity" } },
-        { "field": { "Name": "quickStats" } }
-      ],
-      "pagingInfo": {
-        "limit": 1,
-        "offset": 0
-      }
-    };
-
-    const response = await apperClient.fetchRecords('dashboard', params);
-    
-    if (!response.success) {
-      console.error('Dashboard fetch failed:', response.message);
-      throw new Error(response.message || 'Failed to fetch dashboard data');
-    }
-
-    // Return the first dashboard record or empty object if no data
-    const dashboardData = response.data && response.data.length > 0 ? response.data[0] : {};
+    // Get real-time statistics from actual database tables
+    const statsData = await getDashboardStats();
     
     // Add a small delay to simulate network timing
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    return dashboardData;
+    return statsData;
   } catch (error) {
     console.error('Error fetching dashboard data:', error);
     throw error;
